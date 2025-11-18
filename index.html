@@ -3,52 +3,87 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-  <title>Fraction Bars</title>
+  <title>Fraction Bars v2</title>
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
+    /* ... existing reset styles ... */
     *{margin:0;padding:0;box-sizing:border-box}
     body{
       font-family:'Lexend',sans-serif;
-      background:#e5e7eb;
+      background:#f3f4f6;
       color:#111827;
       height:100vh;
       overflow:hidden;
       touch-action:manipulation;
     }
 
-    #app{
-      position:relative;
-      height:100%;
-      width:100%;
-      display:flex;
-      flex-direction:column;
-    }
+    #app{ position:relative; height:100%; width:100%; display:flex; flex-direction:column; }
 
     #workPane{
       flex:1;
       overflow-y:auto;
-      padding:20px;
+      padding:40px 20px; /* Added top padding for status */
       display:flex;
       flex-direction:column;
       align-items:center;
+      position: relative; /* For the ruler */
     }
 
-    #barsWrapper{
-      width:90%;
-      max-width:800px;
+    /* NEW: Ruler Line */
+    #rulerLine {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background-color: #ef4444;
+      border-left: 1px dashed white; /* Makes it look like a tool */
+      pointer-events: none; /* Let clicks pass through */
+      z-index: 50;
+      display: none; /* Hidden until mouse moves */
+      box-shadow: 0 0 4px rgba(0,0,0,0.3);
     }
+
+    /* NEW: Status Display */
+    #statusDisplay {
+      margin-bottom: 20px;
+      font-size: 1.2rem;
+      background: white;
+      padding: 10px 20px;
+      border-radius: 50px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      font-weight: bold;
+      color: #4b5563;
+    }
+
+    #barsWrapper{ width:95%; max-width:900px; position: relative; }
 
     .fraction-bar-container{
       width:100%;
-      margin-bottom:0;
+      margin-bottom: 15px; /* Better spacing */
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    /* NEW: Side Label */
+    .bar-label {
+      width: 60px;
+      text-align: right;
+      font-weight: bold;
+      color: #6b7280;
+      font-size: 14px;
     }
 
     .fraction-bar{
-      width:100%;
+      flex: 1;
       height:60px;
       display:flex;
       border:2px solid #111827;
-      box-shadow:0 2px 4px rgba(0,0,0,.25);
+      box-shadow:4px 4px 0px rgba(0,0,0,0.2); /* Retro pop style */
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff; /* Default background */
+      transition: transform 0.1s;
     }
 
     .fraction-segment{
@@ -57,162 +92,212 @@
       align-items:center;
       justify-content:center;
       font-weight:700;
-      font-size:20px;
+      font-size:18px;
       color:#111827;
       border-right:2px solid #111827;
+      cursor: pointer;
+      transition: background 0.1s;
+      user-select: none;
     }
-    .fraction-segment:last-child{
-      border-right:none;
+    .fraction-segment:last-child{ border-right:none; }
+    
+    /* Hover effect for interaction hint */
+    .fraction-segment:hover {
+      filter: brightness(0.95);
     }
 
-    /* Color scheme for different fractions */
-    .bar-whole{background:#ef4444}
-    .bar-halves{background:#f97316}
-    .bar-thirds{background:#f59e0b}
-    .bar-fourths{background:#eab308}
-    .bar-fifths{background:#84cc16}
-    .bar-sixths{background:#22c55e}
-    .bar-eighths{background:#14b8a6}
-    .bar-ninths{background:#06b6d4}
-    .bar-tenths{background:#0ea5e9}
-    .bar-twelfths{background:#6366f1}
+    /* NEW: Selected State */
+    .fraction-segment.selected {
+      box-shadow: inset 0 0 0 4px rgba(0,0,0,0.1);
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    /* Define colors only for selected state now to make unselected look "empty" 
+       OR keep them colored and darken on select. 
+       Let's keep them colored but use opacity for unselected logic if desired.
+       Here we will just apply the background color classes directly.
+    */
+    
+    .bg-whole{background:#ef4444}
+    .bg-halves{background:#f97316}
+    .bg-thirds{background:#f59e0b}
+    .bg-fourths{background:#eab308}
+    .bg-fifths{background:#84cc16}
+    .bg-sixths{background:#22c55e}
+    .bg-eighths{background:#14b8a6}
+    .bg-ninths{background:#06b6d4}
+    .bg-tenths{background:#0ea5e9}
+    .bg-twelfths{background:#6366f1}
+
+    /* Initial state: lighter version or white? Let's stick to colored but add a "pop" on click */
+    .fraction-segment:active {
+      transform: scale(0.98);
+    }
+    
+    .fraction-segment.selected {
+        /* Add a checkmark or visual indicator logic could go here */
+        filter: brightness(0.85) contrast(1.2);
+    }
 
     #controls{
-      position:fixed;
-      bottom:0;
-      left:0;
-      right:0;
-      background:#3f3f46;
-      padding:12px;
+      background:#1f2937;
+      padding:15px;
       display:flex;
       flex-wrap:wrap;
-      gap:8px;
+      gap:10px;
       justify-content:center;
-      box-shadow:0 -4px 12px rgba(0,0,0,.3);
+      box-shadow:0 -4px 12px rgba(0,0,0,.2);
       z-index:100;
     }
 
     .fraction-btn{
-      background:#6b7280;
-      color:#fff;
-      border:2px solid #374151;
-      border-radius:6px;
+      background:#374151;
+      color:#e5e7eb;
+      border:none;
+      border-radius:8px;
       padding:10px 16px;
       cursor:pointer;
       font-weight:700;
       font-size:14px;
-      box-shadow:0 2px 4px rgba(0,0,0,.25);
       transition:all .2s;
-      font-family:'Lexend',sans-serif;
     }
 
-    .fraction-btn:hover{
-      background:#52525b;
-      transform:translateY(-1px);
-    }
-
-    .fraction-btn.active{
-      background:#22c55e;
-      border-color:#16a34a;
-    }
-
-    .fraction-btn.reset{
-      background:#dc2626;
-      border-color:#991b1b;
-    }
+    .fraction-btn:hover{ background:#4b5563; transform:translateY(-2px); }
+    .fraction-btn.active{ background:#3b82f6; color: white; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+    .fraction-btn.reset{ background:#dc2626; margin-left: auto; }
   </style>
 </head>
 <body>
   <div id="app">
     <div id="workPane">
+      <!-- The Ruler Line -->
+      <div id="rulerLine"></div>
+      
+      <div id="statusDisplay">Select segments to count</div>
+
       <div id="barsWrapper">
-        <!-- Whole bar (always visible) -->
+        <!-- Whole bar -->
         <div class="fraction-bar-container">
-          <div class="fraction-bar bar-whole">
-            <div class="fraction-segment">1</div>
+          <div class="bar-label">1</div>
+          <div class="fraction-bar bg-whole">
+            <div class="fraction-segment" data-val="1" data-denom="1">1</div>
           </div>
         </div>
-        <!-- Additional bars will be added here -->
         <div id="fractionBars"></div>
       </div>
     </div>
 
     <div id="controls">
-      <button class="fraction-btn" data-denominator="2">Halves (1/2)</button>
-      <button class="fraction-btn" data-denominator="3">Thirds (1/3)</button>
-      <button class="fraction-btn" data-denominator="4">Fourths (1/4)</button>
-      <button class="fraction-btn" data-denominator="5">Fifths (1/5)</button>
-      <button class="fraction-btn" data-denominator="6">Sixths (1/6)</button>
-      <button class="fraction-btn" data-denominator="8">Eighths (1/8)</button>
-      <button class="fraction-btn" data-denominator="9">Ninths (1/9)</button>
-      <button class="fraction-btn" data-denominator="10">Tenths (1/10)</button>
-      <button class="fraction-btn" data-denominator="12">Twelfths (1/12)</button>
+      <button class="fraction-btn" data-denominator="2">1/2</button>
+      <button class="fraction-btn" data-denominator="3">1/3</button>
+      <button class="fraction-btn" data-denominator="4">1/4</button>
+      <button class="fraction-btn" data-denominator="5">1/5</button>
+      <button class="fraction-btn" data-denominator="6">1/6</button>
+      <button class="fraction-btn" data-denominator="8">1/8</button>
+      <button class="fraction-btn" data-denominator="10">1/10</button>
+      <button class="fraction-btn" data-denominator="12">1/12</button>
       <button class="fraction-btn reset" id="resetBtn">Reset</button>
     </div>
   </div>
 
   <script>
-    // State: which denominators are currently visible
     let activeDenominators = new Set();
+    const container = document.getElementById('fractionBars');
+    const ruler = document.getElementById('rulerLine');
+    const workPane = document.getElementById('workPane');
 
-    // Mapping denominators to class names
-    const denominatorClasses = {
-      2: 'bar-halves',
-      3: 'bar-thirds',
-      4: 'bar-fourths',
-      5: 'bar-fifths',
-      6: 'bar-sixths',
-      8: 'bar-eighths',
-      9: 'bar-ninths',
-      10: 'bar-tenths',
-      12: 'bar-twelfths'
+    const classMap = {
+      2: 'bg-halves', 3: 'bg-thirds', 4: 'bg-fourths', 5: 'bg-fifths',
+      6: 'bg-sixths', 8: 'bg-eighths', 9: 'bg-ninths', 10: 'bg-tenths', 12: 'bg-twelfths'
     };
 
-    const denominatorNames = {
-      2: 'Halves',
-      3: 'Thirds',
-      4: 'Fourths',
-      5: 'Fifths',
-      6: 'Sixths',
-      8: 'Eighths',
-      9: 'Ninths',
-      10: 'Tenths',
-      12: 'Twelfths'
-    };
-
+    // 1. Render Logic
     function renderBars() {
-      const container = document.getElementById('fractionBars');
       container.innerHTML = '';
-
-      // Sort denominators (larger fractions = smaller denominators = appear first)
       const sorted = Array.from(activeDenominators).sort((a, b) => a - b);
 
       sorted.forEach(denom => {
-        const barContainer = document.createElement('div');
-        barContainer.className = 'fraction-bar-container';
+        // Container
+        const row = document.createElement('div');
+        row.className = 'fraction-bar-container';
 
+        // Label (Feature #3)
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = `1/${denom}`;
+        row.appendChild(label);
+
+        // Bar
         const bar = document.createElement('div');
-        bar.className = `fraction-bar ${denominatorClasses[denom]}`;
+        bar.className = `fraction-bar ${classMap[denom] || 'bg-gray-400'}`;
 
-        // Create segments
+        // Segments
         for (let i = 1; i <= denom; i++) {
           const segment = document.createElement('div');
           segment.className = 'fraction-segment';
           segment.textContent = `1/${denom}`;
+          // Store data for math (Feature #1)
+          segment.dataset.val = 1/denom;
+          
+          // Toggle Selection Event
+          segment.addEventListener('click', function() {
+            this.classList.toggle('selected');
+            updateTotal();
+          });
+
           bar.appendChild(segment);
         }
 
-        barContainer.appendChild(bar);
-        container.appendChild(barContainer);
+        row.appendChild(bar);
+        container.appendChild(row);
       });
     }
 
-    function toggleDenominator(denom) {
-      if (activeDenominators.has(denom)) {
-        activeDenominators.delete(denom);
+    // 2. Calculate Total Selected (Feature #1)
+    function updateTotal() {
+      const selected = document.querySelectorAll('.fraction-segment.selected');
+      let total = 0;
+      selected.forEach(el => {
+        total += parseFloat(el.dataset.val);
+      });
+      
+      // Format for display (Clean up float errors)
+      const displayEl = document.getElementById('statusDisplay');
+      if(selected.length === 0) {
+        displayEl.textContent = "Select segments to count";
       } else {
-        activeDenominators.add(denom);
+        // Simple logic to check if it's close to a whole number or 0.5
+        const cleanTotal = Math.round(total * 1000) / 1000; 
+        displayEl.textContent = `Approx Decimal Total: ${cleanTotal}`;
       }
+    }
+
+    // 3. Mouse Move Ruler (Feature #2)
+    workPane.addEventListener('mousemove', (e) => {
+      const rect = workPane.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      
+      // Only show if inside the wrapper area horizontally
+      const wrapperRect = document.getElementById('barsWrapper').getBoundingClientRect();
+      const relativeWrapperX = wrapperRect.left - rect.left;
+      
+      if(x > relativeWrapperX && x < (relativeWrapperX + wrapperRect.width)) {
+         ruler.style.display = 'block';
+         ruler.style.left = x + 'px';
+      } else {
+         ruler.style.display = 'none';
+      }
+    });
+
+    workPane.addEventListener('mouseleave', () => {
+      ruler.style.display = 'none';
+    });
+
+    // Standard Toggle Logic
+    function toggleDenominator(denom) {
+      if (activeDenominators.has(denom)) activeDenominators.delete(denom);
+      else activeDenominators.add(denom);
       renderBars();
       updateButtonStates();
     }
@@ -220,30 +305,21 @@
     function updateButtonStates() {
       document.querySelectorAll('.fraction-btn[data-denominator]').forEach(btn => {
         const denom = parseInt(btn.dataset.denominator);
-        if (activeDenominators.has(denom)) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-        }
+        btn.classList.toggle('active', activeDenominators.has(denom));
       });
     }
 
-    function reset() {
-      activeDenominators.clear();
-      renderBars();
-      updateButtonStates();
-    }
-
-    // Event listeners
     document.querySelectorAll('.fraction-btn[data-denominator]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const denom = parseInt(btn.dataset.denominator);
-        toggleDenominator(denom);
-      });
+      btn.addEventListener('click', () => toggleDenominator(parseInt(btn.dataset.denominator)));
     });
 
-    document.getElementById('resetBtn').addEventListener('click', reset);
-
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      activeDenominators.clear();
+      document.getElementById('statusDisplay').textContent = "Select segments to count";
+      renderBars();
+      updateButtonStates();
+    });
+    
     // Initial render
     renderBars();
   </script>
