@@ -10,7 +10,8 @@
       --bg-color: #f3f4f6;
       --text-color: #1f2937;
       --panel-bg: #ffffff;
-      --border-color: #e5e7eb;
+      --border-color: #111827;
+      --highlighter-color: #fbbf24; /* Bright Amber/Yellow for selection */
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,10 +43,8 @@
     .tool-group { display: flex; align-items: center; gap: 15px; }
     .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; user-select: none; }
     
-    /* Custom Checkbox Style */
     input[type="checkbox"] { transform: scale(1.2); cursor: pointer; accent-color: #3b82f6; }
 
-    /* Total Display */
     #totalDisplay {
       background: #374151;
       padding: 4px 12px;
@@ -63,7 +62,7 @@
     #workPane {
       flex: 1;
       overflow-y: auto;
-      padding: 30px 20px 100px 20px; /* Bottom padding for fixed footer */
+      padding: 30px 20px 100px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -88,7 +87,7 @@
       border-left: 1px dashed rgba(255,255,255,0.5);
       pointer-events: none;
       z-index: 50;
-      display: none; /* Toggled via JS */
+      display: none; 
       box-shadow: 0 0 4px rgba(0,0,0,0.4);
     }
     #rulerLabel {
@@ -108,9 +107,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      /* Animation for adding new bars */
       animation: slideIn 0.3s ease-out;
-      background: transparent;
     }
 
     @keyframes slideIn {
@@ -140,11 +137,13 @@
       flex: 1;
       height: 55px;
       display: flex;
-      border: 2px solid var(--bar-color); /* Dynamic Color */
-      border-radius: 8px;
+      /* REVERTED: Dark thick border */
+      border: 2px solid var(--border-color); 
+      border-radius: 0px; /* Sharper edges like original */
       overflow: hidden;
-      background: #ffffff;
-      box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+      /* REVERTED: Background is now the variable color */
+      background-color: var(--bar-color);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.25);
     }
 
     .segment {
@@ -153,31 +152,30 @@
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 16px;
-      /* Default State: Outline style */
-      color: var(--bar-color); 
-      border-right: 1px solid var(--bar-color);
+      font-size: 18px;
+      color: #111827; /* Always black text */
+      /* REVERTED: Dark separator lines */
+      border-right: 2px solid var(--border-color);
       cursor: pointer;
       user-select: none;
-      transition: all 0.1s ease;
+      transition: background 0.15s ease;
     }
     .segment:last-child { border-right: none; }
 
     .segment:hover {
-      background-color: rgba(0,0,0,0.03);
+      filter: brightness(1.1);
     }
 
-    /* ACTIVE STATE: Filled */
+    /* NEW: Highlighter Effect */
     .segment.selected {
-      background-color: var(--bar-color);
-      color: white;
+      background-color: #fef08a !important; /* High contrast yellow/cream */
+      color: black;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
     }
     
     /* While dragging styling */
     .fraction-row.dragging {
       opacity: 0.5;
-      border: 2px dashed #9ca3af;
-      border-radius: 8px;
     }
 
     /* --- FOOTER CONTROLS --- */
@@ -218,7 +216,6 @@
     }
     .preset-btn:hover { background: #e5e7eb; }
 
-    /* Custom Input Styling */
     .custom-group {
       display: flex;
       gap: 5px;
@@ -234,16 +231,10 @@
       border-radius: 4px;
       font-family: 'Lexend', sans-serif;
     }
-    .add-btn {
-      background: #3b82f6;
-      color: white;
-    }
+    .add-btn { background: #3b82f6; color: white; }
     .add-btn:hover { background: #2563eb; }
 
-    .reset-btn {
-      background: #ef4444;
-      color: white;
-    }
+    .reset-btn { background: #ef4444; color: white; }
     .reset-btn:hover { background: #dc2626; }
 
   </style>
@@ -276,7 +267,6 @@
 
   <!-- Bottom Controls -->
   <div id="controls">
-    <!-- Standard Fractions -->
     <div class="control-row">
       <button class="preset-btn" onclick="addBar(2)">1/2</button>
       <button class="preset-btn" onclick="addBar(3)">1/3</button>
@@ -288,7 +278,6 @@
       <button class="preset-btn" onclick="addBar(12)">1/12</button>
     </div>
     
-    <!-- Advanced Controls -->
     <div class="control-row">
       <div class="custom-group">
         <input type="number" id="customInput" placeholder="#" min="1" max="50">
@@ -299,8 +288,6 @@
   </div>
 
   <script>
-    // --- STATE ---
-    // We store objects: { id: timestamp, denom: number, color: string }
     let bars = []; 
     
     const wrapper = document.getElementById('barsWrapper');
@@ -308,39 +295,39 @@
     const rulerLabel = document.getElementById('rulerLabel');
     const totalDisplay = document.getElementById('totalDisplay');
     
-    // --- COLOR GENERATOR ---
-    // Generates a consistent HSL color based on the number
+    // Original Color Map
     function getColor(n) {
-      // Special hardcoded colors for standard fractions to look nice
       const map = {
-        1: '#ef4444', 2: '#f97316', 3: '#f59e0b', 4: '#eab308',
-        5: '#84cc16', 6: '#22c55e', 8: '#14b8a6', 10: '#0ea5e9', 12: '#6366f1'
+        1: '#ef4444', // Whole - Red
+        2: '#f97316', // Halves - Orange
+        3: '#f59e0b', // Thirds - Amber
+        4: '#eab308', // Fourths - Yellow
+        5: '#84cc16', // Fifths - Lime
+        6: '#22c55e', // Sixths - Green
+        8: '#14b8a6', // Eighths - Teal
+        9: '#06b6d4', // Ninths - Cyan
+        10: '#0ea5e9', // Tenths - Sky
+        12: '#6366f1'  // Twelfths - Indigo
       };
       if(map[n]) return map[n];
 
-      // Auto-generate for custom numbers (using golden angle approx to separate colors)
+      // Fallback for custom numbers
       const hue = (n * 137.508) % 360; 
-      return `hsl(${hue}, 75%, 45%)`;
+      return `hsl(${hue}, 70%, 50%)`;
     }
 
-    // --- CORE LOGIC ---
-
     function init() {
-      // Add 1 whole bar by default
       addBar(1);
     }
 
     function addBar(denom) {
-      const id = Date.now() + Math.random(); // Unique ID
+      const id = Date.now() + Math.random();
       const color = getColor(denom);
-      
       const barObj = { id, denom, color };
       bars.push(barObj);
-      
       renderBar(barObj);
     }
 
-    // Renders a single bar and appends it (Used for initial add)
     function renderBar(barData) {
       const row = document.createElement('div');
       row.className = 'fraction-row';
@@ -348,19 +335,22 @@
       row.dataset.id = barData.id;
       row.style.setProperty('--bar-color', barData.color);
 
-      // Drag Handle
+      // Handle
       const handle = document.createElement('div');
       handle.className = 'drag-handle';
-      handle.innerHTML = '&#8942;&#8942;'; // Vertical dots
+      handle.innerHTML = '&#8942;&#8942;';
       row.appendChild(handle);
 
       // Label
       const label = document.createElement('div');
       label.className = 'row-label';
       label.textContent = `1/${barData.denom}`;
+      label.title = "Double click to remove";
+      label.style.cursor = "pointer";
+      label.addEventListener('dblclick', () => removeBar(barData.id));
       row.appendChild(label);
 
-      // Bar Container
+      // Bar
       const bar = document.createElement('div');
       bar.className = 'fraction-bar';
 
@@ -371,7 +361,6 @@
         seg.textContent = `1/${barData.denom}`;
         seg.dataset.value = 1 / barData.denom;
         
-        // Click Event
         seg.addEventListener('click', () => {
           seg.classList.toggle('selected');
           calculateTotal();
@@ -380,17 +369,8 @@
         bar.appendChild(seg);
       }
 
-      // Add delete button? (Optional, but let's keep it simple for now: Reset clears all)
-      // Or double click handle to remove? Let's double click label to remove.
-      label.title = "Double click to remove row";
-      label.style.cursor = "pointer";
-      label.addEventListener('dblclick', () => removeBar(barData.id));
-
       row.appendChild(bar);
-      
-      // Drag Events
       addDragEvents(row);
-
       wrapper.appendChild(row);
     }
 
@@ -405,20 +385,18 @@
       bars = [];
       wrapper.innerHTML = '';
       calculateTotal();
-      addBar(1); // Always nice to have the 1 bar
+      addBar(1);
     }
 
     function calculateTotal() {
       const selected = document.querySelectorAll('.segment.selected');
       let sum = 0;
       selected.forEach(s => sum += parseFloat(s.dataset.value));
-      
-      // Clean float math
       sum = Math.round(sum * 10000) / 10000;
       totalDisplay.textContent = `Total: ${sum}`;
     }
 
-    // --- CUSTOM INPUT ---
+    // Custom Input
     document.getElementById('addCustomBtn').addEventListener('click', () => {
       const input = document.getElementById('customInput');
       const val = parseInt(input.value);
@@ -430,7 +408,7 @@
       }
     });
 
-    // --- DRAG AND DROP LOGIC ---
+    // Drag & Drop
     let dragSrcEl = null;
 
     function addDragEvents(row) {
@@ -441,48 +419,29 @@
         this.classList.add('dragging');
       });
 
-      row.addEventListener('dragend', function(e) {
+      row.addEventListener('dragend', function() {
         this.classList.remove('dragging');
-        // Re-order the data array based on DOM order
-        recalcDataOrder();
       });
 
       row.addEventListener('dragover', function(e) {
-        e.preventDefault(); // Necessary for drop to work
-        e.dataTransfer.dropEffect = 'move';
+        e.preventDefault();
         return false;
-      });
-
-      row.addEventListener('dragenter', function(e) {
-        // Visual cue logic could go here
       });
 
       row.addEventListener('drop', function(e) {
         e.stopPropagation();
         if (dragSrcEl !== this) {
-          // Swap DOM elements
-          // Note: This is a simple swap. For full sorting, insertBefore is usually better.
-          // Let's use insertBefore logic for smoother sorting
           const allRows = [...wrapper.querySelectorAll('.fraction-row')];
           const srcIndex = allRows.indexOf(dragSrcEl);
           const targetIndex = allRows.indexOf(this);
-
-          if(srcIndex < targetIndex) {
-            this.after(dragSrcEl);
-          } else {
-            this.before(dragSrcEl);
-          }
+          if(srcIndex < targetIndex) this.after(dragSrcEl);
+          else this.before(dragSrcEl);
         }
         return false;
       });
     }
 
-    function recalcDataOrder() {
-      // Sync internal array with DOM (if we needed to save state)
-      // Currently, the DOM is the source of truth for visual order.
-    }
-
-    // --- RULER TOOL ---
+    // Ruler Tool
     const workPane = document.getElementById('workPane');
     let rulerEnabled = false;
 
@@ -494,23 +453,16 @@
 
     workPane.addEventListener('mousemove', (e) => {
       if (!rulerEnabled) return;
-
       const rect = workPane.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const wrapperRect = wrapper.getBoundingClientRect();
       const relativeWrapperX = wrapperRect.left - rect.left;
 
-      // Ensure ruler stays within the bars area roughly
       if (x >= relativeWrapperX && x <= (relativeWrapperX + wrapperRect.width)) {
         rulerLine.style.display = 'block';
         rulerLine.style.left = x + 'px';
-        
-        // Optional: Show approximate value at this position relative to 1 whole
-        // Assuming the bars take up 100% of wrapper
         const pct = (e.clientX - wrapperRect.left) / wrapperRect.width;
-        if(pct >= 0 && pct <= 1.01) {
-            rulerLabel.textContent = pct.toFixed(2);
-        }
+        if(pct >= 0 && pct <= 1.01) rulerLabel.textContent = pct.toFixed(2);
       } else {
         rulerLine.style.display = 'none';
       }
@@ -520,18 +472,13 @@
       if(rulerEnabled) rulerLine.style.display = 'none';
     });
 
-    // --- TOTAL TOGGLE ---
+    // Total Toggle
     document.getElementById('totalToggle').addEventListener('change', (e) => {
-      if(e.target.checked) {
-        totalDisplay.classList.remove('hidden');
-      } else {
-        totalDisplay.classList.add('hidden');
-      }
+      if(e.target.checked) totalDisplay.classList.remove('hidden');
+      else totalDisplay.classList.add('hidden');
     });
 
-    // Start
     init();
-
   </script>
 </body>
 </html>
