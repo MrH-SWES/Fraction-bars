@@ -106,6 +106,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      /* Animation for adding new bars */
       animation: slideIn 0.3s ease-out;
     }
 
@@ -113,16 +114,6 @@
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
-    .drag-handle {
-      cursor: grab;
-      color: #9ca3af;
-      font-size: 1.5rem;
-      line-height: 1;
-      padding: 0 5px;
-      user-select: none;
-    }
-    .drag-handle:active { cursor: grabbing; color: #4b5563; }
 
     .row-label {
       width: 50px;
@@ -137,7 +128,6 @@
       height: 55px;
       display: flex;
       border: 2px solid var(--border-color); 
-      /* Background is inherited from segments to avoid gaps */
       background: transparent; 
       box-shadow: 0 2px 4px rgba(0,0,0,0.25);
     }
@@ -168,15 +158,9 @@
     /* Selected State: The "Highlighter" Color */
     .segment.selected {
       background-color: var(--bar-highlight) !important;
-      /* Inner shadow makes it look 'pressed' or 'marked' */
       box-shadow: inset 0 0 0 4px rgba(255,255,255,0.3); 
     }
     
-    /* While dragging styling */
-    .fraction-row.dragging {
-      opacity: 0.5;
-    }
-
     /* --- FOOTER CONTROLS --- */
     #controls {
       background: #ffffff;
@@ -295,27 +279,22 @@
     const totalDisplay = document.getElementById('totalDisplay');
     
     // --- COLOR SYSTEM ---
-    // Returns { base: string, highlight: string }
     function getColors(n) {
-      // Hand-picked map for standard denominators to ensure they look great
       const map = {
-        1:  { base: '#ef4444', highlight: '#fca5a5' }, // Red -> Light Red
-        2:  { base: '#f97316', highlight: '#fdba74' }, // Orange -> Light Orange
-        3:  { base: '#f59e0b', highlight: '#fde047' }, // Amber -> Yellow-ish
-        4:  { base: '#eab308', highlight: '#fef08a' }, // Yellow -> Pale Yellow
-        5:  { base: '#84cc16', highlight: '#bef264' }, // Lime -> Pale Lime
-        6:  { base: '#22c55e', highlight: '#86efac' }, // Green -> Light Green
-        8:  { base: '#14b8a6', highlight: '#5eead4' }, // Teal -> Aqua
-        9:  { base: '#06b6d4', highlight: '#67e8f9' }, // Cyan -> Light Cyan
-        10: { base: '#0ea5e9', highlight: '#7dd3fc' }, // Sky -> Pale Sky
-        12: { base: '#6366f1', highlight: '#a5b4fc' }  // Indigo -> Lavender
+        1:  { base: '#ef4444', highlight: '#fca5a5' },
+        2:  { base: '#f97316', highlight: '#fdba74' },
+        3:  { base: '#f59e0b', highlight: '#fde047' },
+        4:  { base: '#eab308', highlight: '#fef08a' },
+        5:  { base: '#84cc16', highlight: '#bef264' },
+        6:  { base: '#22c55e', highlight: '#86efac' },
+        8:  { base: '#14b8a6', highlight: '#5eead4' },
+        9:  { base: '#06b6d4', highlight: '#67e8f9' },
+        10: { base: '#0ea5e9', highlight: '#7dd3fc' },
+        12: { base: '#6366f1', highlight: '#a5b4fc' }
       };
 
       if(map[n]) return map[n];
 
-      // Algorithmic generation for custom numbers
-      // Base: Solid color
-      // Highlight: High lightness version of same hue
       const hue = (n * 137.508) % 360; 
       return {
         base: `hsl(${hue}, 70%, 50%)`,
@@ -332,24 +311,42 @@
       const colors = getColors(denom);
       const barObj = { id, denom, colors };
       bars.push(barObj);
-      renderBar(barObj);
+      renderBarSorted(barObj);
     }
 
-    function renderBar(barData) {
+    // --- NEW SORTED RENDER LOGIC ---
+    function renderBarSorted(barData) {
+      const row = createBarElement(barData);
+      
+      // Find insertion point
+      const existingRows = Array.from(wrapper.children);
+      let inserted = false;
+
+      for (let existingRow of existingRows) {
+        const currentDenom = parseInt(existingRow.dataset.denom);
+        // If existing bar has a LARGER denominator (meaning it is a SMALLER fraction),
+        // we insert our new (bigger fraction/smaller denom) bar BEFORE it.
+        if (currentDenom > barData.denom) {
+          wrapper.insertBefore(row, existingRow);
+          inserted = true;
+          break;
+        }
+      }
+
+      // If we didn't find a larger denominator, append to the end
+      if (!inserted) {
+        wrapper.appendChild(row);
+      }
+    }
+
+    function createBarElement(barData) {
       const row = document.createElement('div');
       row.className = 'fraction-row';
-      row.setAttribute('draggable', 'true');
       row.dataset.id = barData.id;
+      row.dataset.denom = barData.denom; // Critical for sorting
       
-      // Set CSS Variables for this specific row
       row.style.setProperty('--bar-base', barData.colors.base);
       row.style.setProperty('--bar-highlight', barData.colors.highlight);
-
-      // Drag Handle
-      const handle = document.createElement('div');
-      handle.className = 'drag-handle';
-      handle.innerHTML = '&#8942;&#8942;';
-      row.appendChild(handle);
 
       // Label
       const label = document.createElement('div');
@@ -380,8 +377,7 @@
       }
 
       row.appendChild(bar);
-      addDragEvents(row);
-      wrapper.appendChild(row);
+      return row;
     }
 
     function removeBar(id) {
@@ -417,39 +413,6 @@
         alert("Please enter a number between 1 and 100");
       }
     });
-
-    // Drag & Drop
-    let dragSrcEl = null;
-
-    function addDragEvents(row) {
-      row.addEventListener('dragstart', function(e) {
-        dragSrcEl = this;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', this.innerHTML);
-        this.classList.add('dragging');
-      });
-
-      row.addEventListener('dragend', function() {
-        this.classList.remove('dragging');
-      });
-
-      row.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        return false;
-      });
-
-      row.addEventListener('drop', function(e) {
-        e.stopPropagation();
-        if (dragSrcEl !== this) {
-          const allRows = [...wrapper.querySelectorAll('.fraction-row')];
-          const srcIndex = allRows.indexOf(dragSrcEl);
-          const targetIndex = allRows.indexOf(this);
-          if(srcIndex < targetIndex) this.after(dragSrcEl);
-          else this.before(dragSrcEl);
-        }
-        return false;
-      });
-    }
 
     // Ruler Tool
     const workPane = document.getElementById('workPane');
