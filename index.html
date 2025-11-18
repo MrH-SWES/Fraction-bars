@@ -11,7 +11,6 @@
       --text-color: #1f2937;
       --panel-bg: #ffffff;
       --border-color: #111827;
-      --highlighter-color: #fbbf24; /* Bright Amber/Yellow for selection */
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,7 +55,7 @@
       text-align: center;
       border: 1px solid #4b5563;
     }
-    .hidden { visibility: hidden; opacity: 0; }
+    .hidden { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
 
     /* --- WORK AREA --- */
     #workPane {
@@ -137,12 +136,9 @@
       flex: 1;
       height: 55px;
       display: flex;
-      /* REVERTED: Dark thick border */
       border: 2px solid var(--border-color); 
-      border-radius: 0px; /* Sharper edges like original */
-      overflow: hidden;
-      /* REVERTED: Background is now the variable color */
-      background-color: var(--bar-color);
+      /* Background is inherited from segments to avoid gaps */
+      background: transparent; 
       box-shadow: 0 2px 4px rgba(0,0,0,0.25);
     }
 
@@ -153,12 +149,15 @@
       justify-content: center;
       font-weight: 700;
       font-size: 18px;
-      color: #111827; /* Always black text */
-      /* REVERTED: Dark separator lines */
+      color: #111827; 
+      
+      /* Default State: The "Base" Color */
+      background-color: var(--bar-base);
+      
       border-right: 2px solid var(--border-color);
       cursor: pointer;
       user-select: none;
-      transition: background 0.15s ease;
+      transition: background-color 0.15s ease, transform 0.1s;
     }
     .segment:last-child { border-right: none; }
 
@@ -166,11 +165,11 @@
       filter: brightness(1.1);
     }
 
-    /* NEW: Highlighter Effect */
+    /* Selected State: The "Highlighter" Color */
     .segment.selected {
-      background-color: #fef08a !important; /* High contrast yellow/cream */
-      color: black;
-      box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+      background-color: var(--bar-highlight) !important;
+      /* Inner shadow makes it look 'pressed' or 'marked' */
+      box-shadow: inset 0 0 0 4px rgba(255,255,255,0.3); 
     }
     
     /* While dragging styling */
@@ -295,25 +294,33 @@
     const rulerLabel = document.getElementById('rulerLabel');
     const totalDisplay = document.getElementById('totalDisplay');
     
-    // Original Color Map
-    function getColor(n) {
+    // --- COLOR SYSTEM ---
+    // Returns { base: string, highlight: string }
+    function getColors(n) {
+      // Hand-picked map for standard denominators to ensure they look great
       const map = {
-        1: '#ef4444', // Whole - Red
-        2: '#f97316', // Halves - Orange
-        3: '#f59e0b', // Thirds - Amber
-        4: '#eab308', // Fourths - Yellow
-        5: '#84cc16', // Fifths - Lime
-        6: '#22c55e', // Sixths - Green
-        8: '#14b8a6', // Eighths - Teal
-        9: '#06b6d4', // Ninths - Cyan
-        10: '#0ea5e9', // Tenths - Sky
-        12: '#6366f1'  // Twelfths - Indigo
+        1:  { base: '#ef4444', highlight: '#fca5a5' }, // Red -> Light Red
+        2:  { base: '#f97316', highlight: '#fdba74' }, // Orange -> Light Orange
+        3:  { base: '#f59e0b', highlight: '#fde047' }, // Amber -> Yellow-ish
+        4:  { base: '#eab308', highlight: '#fef08a' }, // Yellow -> Pale Yellow
+        5:  { base: '#84cc16', highlight: '#bef264' }, // Lime -> Pale Lime
+        6:  { base: '#22c55e', highlight: '#86efac' }, // Green -> Light Green
+        8:  { base: '#14b8a6', highlight: '#5eead4' }, // Teal -> Aqua
+        9:  { base: '#06b6d4', highlight: '#67e8f9' }, // Cyan -> Light Cyan
+        10: { base: '#0ea5e9', highlight: '#7dd3fc' }, // Sky -> Pale Sky
+        12: { base: '#6366f1', highlight: '#a5b4fc' }  // Indigo -> Lavender
       };
+
       if(map[n]) return map[n];
 
-      // Fallback for custom numbers
+      // Algorithmic generation for custom numbers
+      // Base: Solid color
+      // Highlight: High lightness version of same hue
       const hue = (n * 137.508) % 360; 
-      return `hsl(${hue}, 70%, 50%)`;
+      return {
+        base: `hsl(${hue}, 70%, 50%)`,
+        highlight: `hsl(${hue}, 90%, 80%)`
+      };
     }
 
     function init() {
@@ -322,8 +329,8 @@
 
     function addBar(denom) {
       const id = Date.now() + Math.random();
-      const color = getColor(denom);
-      const barObj = { id, denom, color };
+      const colors = getColors(denom);
+      const barObj = { id, denom, colors };
       bars.push(barObj);
       renderBar(barObj);
     }
@@ -333,9 +340,12 @@
       row.className = 'fraction-row';
       row.setAttribute('draggable', 'true');
       row.dataset.id = barData.id;
-      row.style.setProperty('--bar-color', barData.color);
+      
+      // Set CSS Variables for this specific row
+      row.style.setProperty('--bar-base', barData.colors.base);
+      row.style.setProperty('--bar-highlight', barData.colors.highlight);
 
-      // Handle
+      // Drag Handle
       const handle = document.createElement('div');
       handle.className = 'drag-handle';
       handle.innerHTML = '&#8942;&#8942;';
@@ -350,7 +360,7 @@
       label.addEventListener('dblclick', () => removeBar(barData.id));
       row.appendChild(label);
 
-      // Bar
+      // Bar Container
       const bar = document.createElement('div');
       bar.className = 'fraction-bar';
 
