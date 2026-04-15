@@ -29,6 +29,33 @@
       flex-direction: column;
     }
 
+    /* --- BRAND HEADER --- */
+    #brandHeader {
+      background: #ffffff;
+      padding: 18px 24px 14px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      z-index: 61;
+    }
+    .brand-mark {
+      display: inline-flex;
+      align-items: baseline;
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      color: #111827;
+      user-select: none;
+    }
+    .brand-mark .dot {
+      width: 0.22em;
+      height: 0.22em;
+      margin-left: 0.04em;
+      margin-bottom: 0.08em;
+      border-radius: 50%;
+      display: inline-block;
+      background: linear-gradient(135deg, #efefef, #a8a8a8, #e0e0e0);
+      box-shadow: inset 1px 1px 2px rgba(255,255,255,0.8), 0 2px 5px rgba(0,0,0,0.22);
+    }
+
     /* --- TOP TOOLBAR --- */
     #topBar {
       background: #1f2937;
@@ -43,31 +70,11 @@
       gap: 10px;
     }
 
-    .brand-mark {
-      display: inline-flex;
-      align-items: baseline;
-      font-size: 1.1rem;
-      font-weight: 900;
-      letter-spacing: -0.05em;
-      margin-right: 10px;
-      user-select: none;
-    }
-    .brand-mark .dot {
-      width: 0.22em;
-      height: 0.22em;
-      margin-left: 0.04em;
-      margin-bottom: 0.08em;
-      border-radius: 50%;
-      display: inline-block;
-      background: linear-gradient(135deg, #efefef, #a8a8a8, #e0e0e0);
-      box-shadow: inset 1px 1px 2px rgba(255,255,255,0.8), 0 2px 5px rgba(0,0,0,0.22);
-    }
     .brand-sub {
-      font-size: 0.7rem;
+      font-size: 0.75rem;
       font-weight: 600;
-      color: var(--text-light);
+      color: #9ca3af;
       letter-spacing: -0.04em;
-      margin-left: 8px;
     }
 
     .tool-group { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
@@ -239,6 +246,18 @@
       opacity: 0.4;
       cursor: grabbing;
     }
+    .fraction-row.touch-dragging {
+      opacity: 0.5;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      pointer-events: none;
+    }
+    .drag-placeholder {
+      border: 2px dashed var(--accent);
+      border-radius: 6px;
+      background: rgba(59,130,246,0.08);
+      min-height: 55px;
+    }
     .fraction-row.drag-over-above {
       border-top: 3px solid var(--accent);
     }
@@ -269,12 +288,9 @@
     }
 
     .delete-btn {
-      position: absolute;
-      right: -28px;
-      top: 50%;
-      transform: translateY(-50%);
       width: 22px;
       height: 22px;
+      min-width: 22px;
       border-radius: 50%;
       background: #ef4444;
       color: white;
@@ -289,12 +305,18 @@
       transition: opacity 0.15s;
       padding: 0;
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      flex-shrink: 0;
     }
     .fraction-row:hover .delete-btn {
       opacity: 1;
     }
     .delete-btn:hover {
       background: #dc2626;
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .delete-btn {
+        opacity: 1;
+      }
     }
 
     .fraction-bar {
@@ -394,10 +416,14 @@
 </head>
 <body>
 
+  <!-- Brand Header -->
+  <div id="brandHeader">
+    <span class="brand-mark">Math Things<span class="dot" aria-hidden="true"></span></span>
+  </div>
+
   <!-- Top Settings Bar -->
   <div id="topBar">
     <div class="tool-group">
-      <span class="brand-mark">Math Things<span class="dot" aria-hidden="true"></span></span>
       <span class="brand-sub">Fraction Lab</span>
     </div>
     <div class="tool-group">
@@ -593,7 +619,7 @@
       return row;
     }
 
-    // --- DRAG-TO-REORDER (HTML5 Drag & Drop) ---
+    // --- DRAG-TO-REORDER (HTML5 Drag & Drop + Touch) ---
     function updateDragHandle(label, row) {
       if (isAutoSort()) {
         label.classList.remove('drag-handle');
@@ -601,12 +627,14 @@
         row.draggable = false;
         row.removeEventListener('dragstart', onDragStart);
         row.removeEventListener('dragend', onDragEnd);
+        detachTouchDrag(label);
       } else {
         label.classList.add('drag-handle');
         label.classList.remove('drag-disabled');
         row.draggable = true;
         row.addEventListener('dragstart', onDragStart);
         row.addEventListener('dragend', onDragEnd);
+        attachTouchDrag(label);
       }
     }
 
@@ -681,6 +709,104 @@
       wrapper.querySelectorAll('.drag-over-above, .drag-over-below').forEach(r => {
         r.classList.remove('drag-over-above', 'drag-over-below');
       });
+    }
+
+    // --- TOUCH DRAG-TO-REORDER ---
+    let touchDragRow = null;
+    let touchStartY = 0;
+    let touchPlaceholder = null;
+    let touchRowOriginalIndex = -1;
+
+    function onTouchStart(e) {
+      if (isAutoSort()) return;
+      const label = e.currentTarget;
+      const row = label.closest('.fraction-row');
+      if (!row || row.classList.contains('goal-row')) return;
+
+      touchDragRow = row;
+      touchStartY = e.touches[0].clientY;
+      touchRowOriginalIndex = Array.from(wrapper.children).indexOf(row);
+
+      // Create placeholder
+      touchPlaceholder = document.createElement('div');
+      touchPlaceholder.className = 'drag-placeholder';
+      touchPlaceholder.style.height = row.offsetHeight + 'px';
+
+      // Position row for dragging
+      const rect = row.getBoundingClientRect();
+      row.style.position = 'fixed';
+      row.style.top = rect.top + 'px';
+      row.style.left = rect.left + 'px';
+      row.style.width = rect.width + 'px';
+      row.classList.add('touch-dragging');
+
+      // Insert placeholder where the row was
+      wrapper.insertBefore(touchPlaceholder, row);
+      document.body.appendChild(row);
+
+      e.preventDefault();
+    }
+
+    function onTouchMove(e) {
+      if (!touchDragRow) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const deltaY = touch.clientY - touchStartY;
+      const origRect = touchPlaceholder.getBoundingClientRect();
+      touchDragRow.style.top = (origRect.top + deltaY) + 'px';
+
+      // Determine drop target
+      const rows = Array.from(wrapper.querySelectorAll('.fraction-row:not(.goal-row), .drag-placeholder'));
+      clearDragOverClasses();
+
+      for (const child of rows) {
+        if (child === touchPlaceholder) continue;
+        if (child.classList.contains('goal-row')) continue;
+        const rect = child.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+
+        if (touch.clientY < midY) {
+          wrapper.insertBefore(touchPlaceholder, child);
+          return;
+        }
+      }
+      // If past all rows, append at end
+      wrapper.appendChild(touchPlaceholder);
+    }
+
+    function onTouchEnd(e) {
+      if (!touchDragRow) return;
+
+      // Reset row styles
+      touchDragRow.classList.remove('touch-dragging');
+      touchDragRow.style.position = '';
+      touchDragRow.style.top = '';
+      touchDragRow.style.left = '';
+      touchDragRow.style.width = '';
+
+      // Insert row where placeholder is
+      if (touchPlaceholder && touchPlaceholder.parentNode) {
+        wrapper.insertBefore(touchDragRow, touchPlaceholder);
+        touchPlaceholder.remove();
+      }
+
+      touchDragRow = null;
+      touchPlaceholder = null;
+      clearDragOverClasses();
+      syncBarsArrayToDOM();
+    }
+
+    function attachTouchDrag(label) {
+      label.addEventListener('touchstart', onTouchStart, { passive: false });
+      label.addEventListener('touchmove', onTouchMove, { passive: false });
+      label.addEventListener('touchend', onTouchEnd);
+    }
+
+    function detachTouchDrag(label) {
+      label.removeEventListener('touchstart', onTouchStart);
+      label.removeEventListener('touchmove', onTouchMove);
+      label.removeEventListener('touchend', onTouchEnd);
     }
 
     // Sync bars array order to match current DOM order
