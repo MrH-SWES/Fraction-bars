@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-  <title>Fraction Bars Ultimate</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <title>Fraction Lab · Math Things.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;800;900&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --bg-color: #f3f4f6;
       --text-color: #1f2937;
       --panel-bg: #ffffff;
       --border-color: #111827;
+      --accent: #3b82f6;
+      --goal-color: #a855f7;
+      --text-gray: #6b7280;
+      --text-light: #9ca3af;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -39,10 +43,37 @@
       gap: 10px;
     }
 
-    .tool-group { display: flex; align-items: center; gap: 15px; }
-    .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; user-select: none; }
+    .brand-mark {
+      display: inline-flex;
+      align-items: baseline;
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      margin-right: 10px;
+      user-select: none;
+    }
+    .brand-mark .dot {
+      width: 0.22em;
+      height: 0.22em;
+      margin-left: 0.04em;
+      margin-bottom: 0.08em;
+      border-radius: 50%;
+      display: inline-block;
+      background: linear-gradient(135deg, #efefef, #a8a8a8, #e0e0e0);
+      box-shadow: inset 1px 1px 2px rgba(255,255,255,0.8), 0 2px 5px rgba(0,0,0,0.22);
+    }
+    .brand-sub {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-light);
+      letter-spacing: -0.04em;
+      margin-left: 8px;
+    }
+
+    .tool-group { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; user-select: none; }
     
-    input[type="checkbox"] { transform: scale(1.2); cursor: pointer; accent-color: #3b82f6; }
+    input[type="checkbox"] { transform: scale(1.2); cursor: pointer; accent-color: var(--accent); }
 
     #totalDisplay {
       background: #374151;
@@ -56,6 +87,100 @@
       border: 1px solid #4b5563;
     }
     .hidden { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
+
+    /* --- GOAL MODE --- */
+    .goal-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .goal-group input[type="number"] {
+      width: 48px;
+      padding: 3px 6px;
+      border: 1px solid #4b5563;
+      border-radius: 4px;
+      background: #374151;
+      color: white;
+      font-family: 'Lexend', sans-serif;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .goal-group .goal-slash {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #9ca3af;
+    }
+    .goal-btn {
+      background: var(--goal-color);
+      color: white;
+      font-size: 0.8rem;
+      padding: 5px 10px;
+    }
+    .goal-btn:hover { background: #9333ea; }
+    .goal-clear-btn {
+      background: #6b7280;
+      color: white;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+    }
+    .goal-clear-btn:hover { background: #4b5563; }
+
+    /* Goal Bar */
+    .goal-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 8px;
+      margin-bottom: 4px;
+      border-bottom: 2px dashed var(--goal-color);
+    }
+    .goal-row .row-label {
+      color: var(--goal-color);
+      font-weight: 800;
+    }
+    .goal-bar {
+      height: 50px;
+      border-radius: 4px;
+      background: var(--goal-color);
+      opacity: 0.35;
+      transition: opacity 0.3s, box-shadow 0.3s;
+      position: relative;
+    }
+    .goal-bar .goal-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+    .goal-row.matched .goal-bar {
+      opacity: 0.7;
+      box-shadow: 0 0 18px 4px var(--goal-color), 0 0 40px 8px rgba(168,85,247,0.3);
+    }
+    #goalMessage {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: var(--goal-color);
+      color: white;
+      font-weight: 800;
+      font-size: 1.4rem;
+      padding: 16px 36px;
+      border-radius: 12px;
+      z-index: 200;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s;
+    }
+    #goalMessage.show {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
 
     /* --- WORK AREA --- */
     #workPane {
@@ -106,8 +231,19 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      /* Animation for adding new bars */
       animation: slideIn 0.3s ease-out;
+      position: relative;
+    }
+
+    .fraction-row.dragging {
+      opacity: 0.4;
+      cursor: grabbing;
+    }
+    .fraction-row.drag-over-above {
+      border-top: 3px solid var(--accent);
+    }
+    .fraction-row.drag-over-below {
+      border-bottom: 3px solid var(--accent);
     }
 
     @keyframes slideIn {
@@ -120,7 +256,45 @@
       text-align: right;
       font-size: 0.9rem;
       font-weight: 600;
-      color: #6b7280;
+      color: var(--text-gray);
+    }
+    .row-label.drag-handle {
+      cursor: grab;
+    }
+    .row-label.drag-handle:active {
+      cursor: grabbing;
+    }
+    .row-label.drag-disabled {
+      cursor: default;
+    }
+
+    .delete-btn {
+      position: absolute;
+      right: -28px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ef4444;
+      color: white;
+      border: none;
+      font-size: 14px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+      padding: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .fraction-row:hover .delete-btn {
+      opacity: 1;
+    }
+    .delete-btn:hover {
+      background: #dc2626;
     }
 
     .fraction-bar {
@@ -140,10 +314,7 @@
       font-weight: 700;
       font-size: 18px;
       color: #111827; 
-      
-      /* Default State: The "Base" Color */
       background-color: var(--bar-base);
-      
       border-right: 2px solid var(--border-color);
       cursor: pointer;
       user-select: none;
@@ -155,7 +326,6 @@
       filter: brightness(1.1);
     }
 
-    /* Selected State: The "Highlighter" Color */
     .segment.selected {
       background-color: var(--bar-highlight) !important;
       box-shadow: inset 0 0 0 4px rgba(255,255,255,0.3); 
@@ -214,7 +384,7 @@
       border-radius: 4px;
       font-family: 'Lexend', sans-serif;
     }
-    .add-btn { background: #3b82f6; color: white; }
+    .add-btn { background: var(--accent); color: white; }
     .add-btn:hover { background: #2563eb; }
 
     .reset-btn { background: #ef4444; color: white; }
@@ -227,14 +397,29 @@
   <!-- Top Settings Bar -->
   <div id="topBar">
     <div class="tool-group">
+      <span class="brand-mark">Math Things<span class="dot" aria-hidden="true"></span></span>
+      <span class="brand-sub">Fraction Lab</span>
+    </div>
+    <div class="tool-group">
       <label class="toggle-label">
         <input type="checkbox" id="rulerToggle"> 
-        <span>Ruler Tool</span>
+        <span>Ruler</span>
       </label>
       <label class="toggle-label">
         <input type="checkbox" id="totalToggle" checked> 
-        <span>Show Decimal</span>
+        <span>Decimal</span>
       </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="autoSortToggle" checked> 
+        <span>Auto-Sort</span>
+      </label>
+    </div>
+    <div class="goal-group">
+      <input type="number" id="goalNum" placeholder="n" min="0" max="99" aria-label="Goal numerator">
+      <span class="goal-slash">/</span>
+      <input type="number" id="goalDen" placeholder="d" min="1" max="99" aria-label="Goal denominator">
+      <button class="goal-btn" id="setGoalBtn">Set Goal</button>
+      <button class="goal-clear-btn" id="clearGoalBtn">✕</button>
     </div>
     <div id="totalDisplay">Total: 0</div>
   </div>
@@ -242,6 +427,7 @@
   <!-- Work Area -->
   <div id="workPane">
     <div id="rulerLine"><div id="rulerLabel"></div></div>
+    <div id="goalMessage">🎯 Target Reached!</div>
     
     <div id="barsWrapper">
       <!-- Bars injected here via JS -->
@@ -271,13 +457,22 @@
   </div>
 
   <script>
-    let bars = []; 
+    let bars = [];
+    let goalValue = null;   // numeric value of goal (e.g. 0.75 for 3/4)
+    let goalNum = null;
+    let goalDen = null;
+    let dragSrcRow = null;
+
+    const PRECISION_MULTIPLIER = 100000;
+    const RULER_SNAP_THRESHOLD = 12;
     
     const wrapper = document.getElementById('barsWrapper');
     const rulerLine = document.getElementById('rulerLine');
     const rulerLabel = document.getElementById('rulerLabel');
     const totalDisplay = document.getElementById('totalDisplay');
-    
+    const goalMessage = document.getElementById('goalMessage');
+    const autoSortToggle = document.getElementById('autoSortToggle');
+
     // --- COLOR SYSTEM ---
     function getColors(n) {
       const map = {
@@ -302,6 +497,11 @@
       };
     }
 
+    // --- AUTO-SORT STATE ---
+    function isAutoSort() {
+      return autoSortToggle.checked;
+    }
+
     function init() {
       addBar(1);
     }
@@ -311,30 +511,32 @@
       const colors = getColors(denom);
       const barObj = { id, denom, colors };
       bars.push(barObj);
-      renderBarSorted(barObj);
+      renderBar(barObj);
     }
 
-    // --- NEW SORTED RENDER LOGIC ---
-    function renderBarSorted(barData) {
+    // --- RENDER: sorted or appended based on Auto-Sort toggle ---
+    function renderBar(barData) {
       const row = createBarElement(barData);
-      
-      // Find insertion point
-      const existingRows = Array.from(wrapper.children);
-      let inserted = false;
 
-      for (let existingRow of existingRows) {
-        const currentDenom = parseInt(existingRow.dataset.denom);
-        // If existing bar has a LARGER denominator (meaning it is a SMALLER fraction),
-        // we insert our new (bigger fraction/smaller denom) bar BEFORE it.
-        if (currentDenom > barData.denom) {
-          wrapper.insertBefore(row, existingRow);
-          inserted = true;
-          break;
+      if (isAutoSort()) {
+        // Find insertion point among non-goal rows
+        const existingRows = Array.from(wrapper.querySelectorAll('.fraction-row:not(.goal-row)'));
+        let inserted = false;
+
+        for (let existingRow of existingRows) {
+          const currentDenom = parseInt(existingRow.dataset.denom);
+          if (currentDenom > barData.denom) {
+            wrapper.insertBefore(row, existingRow);
+            inserted = true;
+            break;
+          }
         }
-      }
 
-      // If we didn't find a larger denominator, append to the end
-      if (!inserted) {
+        if (!inserted) {
+          wrapper.appendChild(row);
+        }
+      } else {
+        // Append to end
         wrapper.appendChild(row);
       }
     }
@@ -343,18 +545,16 @@
       const row = document.createElement('div');
       row.className = 'fraction-row';
       row.dataset.id = barData.id;
-      row.dataset.denom = barData.denom; // Critical for sorting
+      row.dataset.denom = barData.denom;
       
       row.style.setProperty('--bar-base', barData.colors.base);
       row.style.setProperty('--bar-highlight', barData.colors.highlight);
 
-      // Label
+      // Label (drag handle when auto-sort is off)
       const label = document.createElement('div');
       label.className = 'row-label';
       label.textContent = `1/${barData.denom}`;
-      label.title = "Double click to remove";
-      label.style.cursor = "pointer";
-      label.addEventListener('dblclick', () => removeBar(barData.id));
+      updateDragHandle(label, row);
       row.appendChild(label);
 
       // Bar Container
@@ -377,7 +577,247 @@
       }
 
       row.appendChild(bar);
+
+      // Delete button (× icon)
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.textContent = '×';
+      delBtn.title = 'Remove row';
+      delBtn.setAttribute('aria-label', 'Delete fraction row');
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeBar(barData.id);
+      });
+      row.appendChild(delBtn);
+
       return row;
+    }
+
+    // --- DRAG-TO-REORDER (HTML5 Drag & Drop) ---
+    function updateDragHandle(label, row) {
+      if (isAutoSort()) {
+        label.classList.remove('drag-handle');
+        label.classList.add('drag-disabled');
+        row.draggable = false;
+        row.removeEventListener('dragstart', onDragStart);
+        row.removeEventListener('dragend', onDragEnd);
+      } else {
+        label.classList.add('drag-handle');
+        label.classList.remove('drag-disabled');
+        row.draggable = true;
+        row.addEventListener('dragstart', onDragStart);
+        row.addEventListener('dragend', onDragEnd);
+      }
+    }
+
+    function refreshAllDragHandles() {
+      const rows = wrapper.querySelectorAll('.fraction-row:not(.goal-row)');
+      rows.forEach(row => {
+        const label = row.querySelector('.row-label');
+        if (label) updateDragHandle(label, row);
+      });
+    }
+
+    function onDragStart(e) {
+      if (isAutoSort()) { e.preventDefault(); return; }
+      dragSrcRow = e.currentTarget;
+      dragSrcRow.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragSrcRow.dataset.id);
+    }
+
+    function onDragEnd(e) {
+      e.currentTarget.classList.remove('dragging');
+      clearDragOverClasses();
+      dragSrcRow = null;
+      syncBarsArrayToDOM();
+    }
+
+    wrapper.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const target = getDropTarget(e);
+      if (!target || target === dragSrcRow || target.classList.contains('goal-row')) return;
+
+      clearDragOverClasses();
+      const rect = target.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        target.classList.add('drag-over-above');
+      } else {
+        target.classList.add('drag-over-below');
+      }
+    });
+
+    wrapper.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!dragSrcRow) return;
+      const target = getDropTarget(e);
+      if (!target || target === dragSrcRow || target.classList.contains('goal-row')) return;
+
+      const rect = target.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+
+      if (e.clientY < midY) {
+        wrapper.insertBefore(dragSrcRow, target);
+      } else {
+        wrapper.insertBefore(dragSrcRow, target.nextSibling);
+      }
+
+      clearDragOverClasses();
+      syncBarsArrayToDOM();
+    });
+
+    function getDropTarget(e) {
+      let el = e.target;
+      while (el && el !== wrapper) {
+        if (el.classList && el.classList.contains('fraction-row')) return el;
+        el = el.parentElement;
+      }
+      return null;
+    }
+
+    function clearDragOverClasses() {
+      wrapper.querySelectorAll('.drag-over-above, .drag-over-below').forEach(r => {
+        r.classList.remove('drag-over-above', 'drag-over-below');
+      });
+    }
+
+    // Sync bars array order to match current DOM order
+    function syncBarsArrayToDOM() {
+      const domIds = Array.from(wrapper.querySelectorAll('.fraction-row:not(.goal-row)')).map(r => parseFloat(r.dataset.id));
+      bars.sort((a, b) => domIds.indexOf(a.id) - domIds.indexOf(b.id));
+    }
+
+    // Auto-Sort toggle: when turned on, re-sort existing bars
+    autoSortToggle.addEventListener('change', () => {
+      refreshAllDragHandles();
+      if (isAutoSort()) {
+        resortAllBars();
+      }
+    });
+
+    function resortAllBars() {
+      // Remove all non-goal rows, re-add sorted
+      const fractionRows = wrapper.querySelectorAll('.fraction-row:not(.goal-row)');
+      fractionRows.forEach(r => r.remove());
+
+      bars.sort((a, b) => a.denom - b.denom);
+      bars.forEach(barData => {
+        const row = createBarElement(barData);
+        wrapper.appendChild(row);
+      });
+    }
+
+    // --- GOAL MODE ---
+    document.getElementById('setGoalBtn').addEventListener('click', setGoal);
+    document.getElementById('clearGoalBtn').addEventListener('click', clearGoal);
+
+    function setGoal() {
+      const numInput = document.getElementById('goalNum');
+      const denInput = document.getElementById('goalDen');
+      const n = parseInt(numInput.value);
+      const d = parseInt(denInput.value);
+
+      if (!n || !d || d <= 0 || n < 0 || n > d) {
+        alert('Enter a valid fraction (numerator ≤ denominator, denominator > 0).');
+        return;
+      }
+
+      goalNum = n;
+      goalDen = d;
+      goalValue = n / d;
+
+      renderGoalBar();
+      calculateTotal();
+    }
+
+    function clearGoal() {
+      goalValue = null;
+      goalNum = null;
+      goalDen = null;
+      const existing = wrapper.querySelector('.goal-row');
+      if (existing) existing.remove();
+      goalMessage.classList.remove('show');
+      calculateTotal();
+    }
+
+    function renderGoalBar() {
+      // Remove existing goal row
+      const existing = wrapper.querySelector('.goal-row');
+      if (existing) existing.remove();
+
+      const row = document.createElement('div');
+      row.className = 'fraction-row goal-row';
+
+      const label = document.createElement('div');
+      label.className = 'row-label';
+      label.textContent = 'Goal';
+      label.style.color = 'var(--goal-color)';
+      label.style.fontWeight = '800';
+      row.appendChild(label);
+
+      // Goal bar container — same flex:1 as fraction-bar
+      const barContainer = document.createElement('div');
+      barContainer.style.flex = '1';
+      barContainer.style.position = 'relative';
+      barContainer.style.height = '50px';
+
+      const goalBar = document.createElement('div');
+      goalBar.className = 'goal-bar';
+      goalBar.style.width = (goalValue * 100) + '%';
+      goalBar.style.height = '100%';
+      goalBar.style.borderRadius = '4px';
+
+      const goalText = document.createElement('div');
+      goalText.className = 'goal-text';
+      goalText.textContent = `${goalNum}/${goalDen}`;
+      goalBar.appendChild(goalText);
+
+      barContainer.appendChild(goalBar);
+      row.appendChild(barContainer);
+
+      // Pin goal row to top of wrapper
+      wrapper.insertBefore(row, wrapper.firstChild);
+    }
+
+    // --- VALIDATION LOGIC ---
+    function checkGoalMatch() {
+      if (goalValue === null) return false;
+
+      // Check each row individually
+      const fractionRows = wrapper.querySelectorAll('.fraction-row:not(.goal-row)');
+      for (const row of fractionRows) {
+        const segments = row.querySelectorAll('.segment.selected');
+        if (segments.length === 0) continue;
+        let rowSum = 0;
+        segments.forEach(s => rowSum += parseFloat(s.dataset.value));
+        rowSum = Math.round(rowSum * PRECISION_MULTIPLIER) / PRECISION_MULTIPLIER;
+        const target = Math.round(goalValue * PRECISION_MULTIPLIER) / PRECISION_MULTIPLIER;
+        if (Math.abs(rowSum - target) < 1e-9) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    let goalMatchTimeout = null;
+
+    function showGoalResult(matched) {
+      const goalRow = wrapper.querySelector('.goal-row');
+      if (!goalRow) return;
+
+      if (matched) {
+        goalRow.classList.add('matched');
+        goalMessage.classList.add('show');
+        clearTimeout(goalMatchTimeout);
+        goalMatchTimeout = setTimeout(() => {
+          goalMessage.classList.remove('show');
+        }, 2200);
+      } else {
+        goalRow.classList.remove('matched');
+        goalMessage.classList.remove('show');
+      }
     }
 
     function removeBar(id) {
@@ -390,6 +830,10 @@
     function resetApp() {
       bars = [];
       wrapper.innerHTML = '';
+      goalValue = null;
+      goalNum = null;
+      goalDen = null;
+      goalMessage.classList.remove('show');
       calculateTotal();
       addBar(1);
     }
@@ -400,6 +844,12 @@
       selected.forEach(s => sum += parseFloat(s.dataset.value));
       sum = Math.round(sum * 10000) / 10000;
       totalDisplay.textContent = `Total: ${sum}`;
+
+      // Goal validation
+      if (goalValue !== null) {
+        const matched = checkGoalMatch();
+        showGoalResult(matched);
+      }
     }
 
     // Custom Input
@@ -414,7 +864,7 @@
       }
     });
 
-    // Ruler Tool
+    // Ruler Tool (with Goal Bar snap)
     const workPane = document.getElementById('workPane');
     let rulerEnabled = false;
 
@@ -427,14 +877,25 @@
     workPane.addEventListener('mousemove', (e) => {
       if (!rulerEnabled) return;
       const rect = workPane.getBoundingClientRect();
-      const x = e.clientX - rect.left;
+      let x = e.clientX - rect.left;
       const wrapperRect = wrapper.getBoundingClientRect();
       const relativeWrapperX = wrapperRect.left - rect.left;
 
       if (x >= relativeWrapperX && x <= (relativeWrapperX + wrapperRect.width)) {
         rulerLine.style.display = 'block';
+
+        // Snap to goal bar edge if close
+        const goalBar = wrapper.querySelector('.goal-bar');
+        if (goalBar) {
+          const gbRect = goalBar.getBoundingClientRect();
+          const goalEdgeX = gbRect.right - rect.left;
+          if (Math.abs(x - goalEdgeX) < RULER_SNAP_THRESHOLD) {
+            x = goalEdgeX;
+          }
+        }
+
         rulerLine.style.left = x + 'px';
-        const pct = (e.clientX - wrapperRect.left) / wrapperRect.width;
+        const pct = (x - relativeWrapperX) / wrapperRect.width;
         if(pct >= 0 && pct <= 1.01) rulerLabel.textContent = pct.toFixed(2);
       } else {
         rulerLine.style.display = 'none';
